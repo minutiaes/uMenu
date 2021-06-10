@@ -40,6 +40,9 @@ class State():
     _d_val = None
     _s_key = None
     _s_val = None
+    
+    _focus_line = 0
+    _focus_dir = 0 # l-r: 0, u:1, d:2
     def __init__(self, menu: MenuElement, left = None, right = None, down = None, up = None, push = None):
         self.left = left
         self.right = right
@@ -51,6 +54,7 @@ class State():
 
         self.last_childstate = None
         self._set_transition()
+        
     def _set_transition(self):
         if self.left is not None:
             self.left.right = self
@@ -61,18 +65,55 @@ class State():
         if self.up is not None:
             self.up.down = self
             self.up.last_childstate = self
+            
+
     def _printer(self):
         print(self.menu.text)
         txt = self.menu.text
-        if self.left is not None:
-            txt = "<" + txt[1:]
-        if self.right is not None:
-            txt = txt[:-1] + ">"    
-        my_menu.writer(0, 0, txt)
-        if(self.down is not None):
-            my_menu.writer(0, 1, self.down.menu.text)
-        else:
-            my_menu.writer(0, 1, " "*16)
+        if (State._focus_line == 0 and State._focus_dir == 0) or (State._focus_line == 1 and State._focus_dir == 2): # at 0, l-r OR at 1, d
+            if self.left is not None:
+                txt = "<" + txt[1:]
+            if self.right is not None:
+                txt = txt[:-1] + ">"
+            my_menu.writer(0, 0, txt)
+            if(self.down is not None):
+                my_menu.writer(0, 1, self.down.menu.text)
+            else:
+                my_menu.writer(0, 1, " "*16)
+            State._focus_line = 0
+        elif State._focus_line == 1 and State._focus_dir == 0: # at 1, l-r
+            if self.left is not None:
+                txt = "<" + txt[1:]
+            if self.right is not None:
+                txt = txt[:-1] + ">"
+            my_menu.writer(0, 1, txt)
+            State._focus_line = 1
+        elif State._focus_line == 0 and State._focus_dir == 2: # at 0, d
+            my_menu.writer(0, 0, " ")
+            my_menu.writer(15, 0, " ")
+            if self.right is not None:
+                my_menu.writer(15, 1, ">")
+            State._focus_line = 1
+        elif State._focus_line == 1 and State._focus_dir == 1: # at 1, u
+            my_menu.writer(0, 1, " ")
+            my_menu.writer(15, 1, " ")
+            if self.right is not None:
+                my_menu.writer(15, 0, ">")
+            if self.left is not None:
+                my_menu.writer(0, 0, "<")
+            State._focus_line = 0
+        elif State._focus_line == 0 and State._focus_dir == 1: # at 0, u
+            if self.left is not None:
+                txt = "<" + txt[1:]
+            if self.right is not None:
+                txt = txt[:-1] + ">"
+            my_menu.writer(0, 1, txt)
+            if(self.up is not None):
+                my_menu.writer(0, 0, self.up.menu.text)
+            else:
+                my_menu.writer(0, 0, " "*16)
+            State._focus_line = 1
+            
     def _action(self):
         self._printer()
         next_state = self._transition()
@@ -86,6 +127,7 @@ class State():
                 db.check_r()
                 if db.status == "r":
                     db.status == "dc"
+                    State._focus_dir = 0
                     return self.left
             if State._r_key() >= State._r_val and self.right is not None:
                 db.reader = State._r_key
@@ -93,6 +135,7 @@ class State():
                 db.check_f()
                 if db.status == "f":
                     db.status == "dc"
+                    State._focus_dir = 0
                     return self.right
             elif State._u_key() <= State._u_val and self.up is not None:
                 db.reader = State._u_key
@@ -100,6 +143,7 @@ class State():
                 db.check_r()
                 if db.status == "r":
                     db.status == "dc"
+                    State._focus_dir = 1
                     return self.up
             elif State._d_key() >= State._d_val and self.down is not None:
                 db.reader = State._d_key
@@ -107,6 +151,7 @@ class State():
                 db.check_f()
                 if db.status == "f":
                     db.status == "dc"
+                    State._focus_dir = 2
                     return self.down
 
 class ChildState(State):
