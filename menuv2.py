@@ -1,4 +1,5 @@
 import machine
+import time
 from esp8266_i2c_lcd import I2cLcd
 from db2 import deBounce
 
@@ -14,6 +15,8 @@ x_axis.width(machine.ADC.WIDTH_9BIT)
 y_axis = machine.ADC(machine.Pin(33))
 y_axis.atten(machine.ADC.ATTN_11DB)
 y_axis.width(machine.ADC.WIDTH_9BIT)
+
+p5 = machine.Pin(18, machine.Pin.IN, machine.Pin.PULL_UP)
 
 class MenuElement():
     def __init__(self, txt):
@@ -114,12 +117,27 @@ class State():
                 my_menu.writer(0, 0, " "*16)
             State._focus_line = 1
             
-    def _action(self):
+    def _state_transition(self):
         self._printer()
-        next_state = self._transition()
-        next_state._action()
+        next_state = self._check_input()
+        next_state._state_transition()
+        
+    def _action(self):
+        my_menu.writer(0, 0, " "*16)
+        my_menu.writer(0, 1, " "*16)
+        time.sleep(1)
+        print(State._focus_line)
+        print(self.menu.text)
+        my_menu.writer(0, State._focus_line, self.menu.text)
+        if (State._focus_line == 0):
+            if self.down is not None:
+                my_menu.writer(0, 1, self.down.menu.text)
+        elif(State._focus_line == 1):
+            my_menu.writer(0, 0, self.up.menu.text)
+            
+        
 
-    def _transition(self):
+    def _check_input(self):
         while True:
             if State._l_key() <= State._l_val and self.left is not None:
                 db.reader = State._l_key
@@ -153,6 +171,10 @@ class State():
                     db.status == "dc"
                     State._focus_dir = 2
                     return self.down
+            elif State._s_key() == State._s_val:
+                print("acaba")
+                self._action()
+                
 
 class ChildState(State):
     def __init__(self, menu: MenuElement, left=None, right=None, down=None, up=None, push=None):
@@ -222,7 +244,7 @@ class uMenu():
         return x
 
     def run_uMenu(self):
-        uMenu.states[0]._action()
+        uMenu.states[0]._state_transition()
 
 
 db = deBounce()
@@ -243,7 +265,8 @@ my_menu.writer(0, 0, "000")
 my_menu.set_controls(r_key = x_axis.read, r_val = 500,
                      l_key = x_axis.read, l_val = 200,
                      u_key = y_axis.read, u_val = 200,
-                     d_key = y_axis.read, d_val = 500)
+                     d_key = y_axis.read, d_val = 500,
+                     s_key = p5.value,    s_val = 0)
 menu1 = my_menu.add_menu(my_element1)
 menu1_1 = my_menu.add_childmenu(my_element1_1, menu1)
 menu1_1_1 = my_menu.add_childmenu(my_element1_1_1, menu1_1)
@@ -255,3 +278,4 @@ my_menu.add_childmenu(my_element3_1, menu3)
 my_menu.add_childmenu(my_element3_2, menu3)
 
 my_menu.run_uMenu()
+
