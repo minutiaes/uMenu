@@ -18,6 +18,8 @@ y_axis.width(machine.ADC.WIDTH_9BIT)
 
 p5 = machine.Pin(18, machine.Pin.IN, machine.Pin.PULL_UP)
 
+led=machine.Pin(2,machine.Pin.OUT)
+
 class MenuElement():
     def __init__(self, txt):
         self.text = MenuElement.align_center(txt)
@@ -29,6 +31,11 @@ class MenuElement():
             return int((16 - l)/2)*" "+txt+int((16 - l)/2)*" "
         else:
             return (int((16 - l+1)/2))*" "+txt+(int((16 - l-1)/2))*" "
+        
+    def _action(self):
+        pass
+    def set_action(self, func):
+        self._action = func
             
         
 
@@ -45,7 +52,7 @@ class State():
     _s_val = None
     
     _focus_line = 0
-    _focus_dir = 0 # l-r: 0, u:1, d:2
+    _focus_dir = 0 # l-r: 0, u:1, d:2, comeback from action: -1
     def __init__(self, menu: MenuElement, left = None, right = None, down = None, up = None, push = None):
         self.left = left
         self.right = right
@@ -116,26 +123,24 @@ class State():
             else:
                 my_menu.writer(0, 0, " "*16)
             State._focus_line = 1
+        elif State._focus_dir == -1: #cb from action
+            my_menu.writer(0, State._focus_line, self.menu.text)
+            if (State._focus_line == 0):
+                if self.down is not None:
+                    my_menu.writer(0, 1, self.down.menu.text)
+            elif(State._focus_line == 1):
+                my_menu.writer(0, 0, self.up.menu.text)
+            
             
     def _state_transition(self):
         self._printer()
         next_state = self._check_input()
         next_state._state_transition()
-        
+
+
     def _action(self):
-        my_menu.writer(0, 0, " "*16)
-        my_menu.writer(0, 1, " "*16)
-        time.sleep(1)
-        print(State._focus_line)
-        print(self.menu.text)
-        my_menu.writer(0, State._focus_line, self.menu.text)
-        if (State._focus_line == 0):
-            if self.down is not None:
-                my_menu.writer(0, 1, self.down.menu.text)
-        elif(State._focus_line == 1):
-            my_menu.writer(0, 0, self.up.menu.text)
-            
-        
+        self.menu._action()
+        self._state_transition() 
 
     def _check_input(self):
         while True:
@@ -172,8 +177,13 @@ class State():
                     State._focus_dir = 2
                     return self.down
             elif State._s_key() == State._s_val:
-                print("acaba")
-                self._action()
+                db.reader = State._s_key
+                db.val = State._s_val
+                db.check_sw_r()
+                if db.status == "r":
+                    print("acaba")
+                    State._focus_dir = -1
+                    self._action()
                 
 
 class ChildState(State):
@@ -202,7 +212,7 @@ class uMenu():
         pass
         
     def writer(self):
-        print('use "set_text_writer" methor')
+        print('use "set_text_writer" method')
     
     def set_text_writer(cls, func_move, func_write):
         def text_writer(x, y, text):
@@ -247,8 +257,12 @@ class uMenu():
         uMenu.states[0]._state_transition()
 
 
+def test_func():
+    led.value(1)
+    
 db = deBounce()
 my_element1 = MenuElement("menu1")
+my_element1.set_action(test_func)
 my_element2 = MenuElement("menu2")
 my_element3 = MenuElement("menu3")
 my_element1_1 = MenuElement("menu1_1")
@@ -277,5 +291,7 @@ menu3 = my_menu.add_menu(my_element3)
 my_menu.add_childmenu(my_element3_1, menu3)
 my_menu.add_childmenu(my_element3_2, menu3)
 
-my_menu.run_uMenu()
+    
 
+
+my_menu.run_uMenu()

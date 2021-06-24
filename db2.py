@@ -63,6 +63,28 @@ class deBounce():
         print("-------")
         self.fired = 0
         return self.status
+    
+    def tim_callback_sw_r(self, tim):
+        if self.state == self.val and self.prv_state == 0:
+            self.status = "h"
+            self.prv_state = 0
+            self.set_timer_r()
+        elif self.state == self.val and self.prv_state == 1:
+            self.status = "f"
+            self.prv_state = 0
+            self.set_timer_r()
+        elif self.state == (not self.val) and self.prv_state == 0:
+            self.status = "r"
+            self.prv_state = 1
+        else:
+            self.status = "dc"
+            self.prv_state = 0
+        print(self.status)
+        print(self.state)
+        print(self.prv_state)
+        print("-------")
+        self.fired = 0
+        return self.status
         
     def check_f(self):
         self.prv_state = 0
@@ -86,10 +108,22 @@ class deBounce():
             if self.status == "r":
                 break
         
+    def check_sw_r(self):
+        self.prv_state = 0
+        while True:
+            self.state = self.reader()
+            if self.state == 1 and self.fired == 0:
+                self.fired = 1
+                self.status = "f"
+                self.set_timer_sw_r()
+            if self.status == "r":
+                break
     def set_timer_f(self):
         self.tim0.init(period=100, mode=Timer.ONE_SHOT, callback=self.tim_callback_f)
     def set_timer_r(self):
-        self.tim0.init(period=100, mode=Timer.ONE_SHOT, callback=self.tim_callback_r)    
+        self.tim0.init(period=100, mode=Timer.ONE_SHOT, callback=self.tim_callback_r)
+    def set_timer_sw_r(self):
+        self.tim0.init(period=100, mode=Timer.ONE_SHOT, callback=self.tim_callback_sw_r)    
         
 
 if __name__ == "__main__":
