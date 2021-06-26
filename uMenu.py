@@ -1,4 +1,4 @@
-from edgeDetector import edgeDetector
+from Joystick import Joystick
 
 class MenuElement():
     def __init__(self, txt):
@@ -20,16 +20,7 @@ class MenuElement():
         
 
 class State():
-    _r_key = None
-    _r_val = None
-    _l_key = None
-    _l_val = None
-    _u_key = None
-    _u_val = None
-    _d_key = None
-    _d_val = None
-    _s_key = None
-    _s_val = None
+    js = None
     
     _focus_line = 0
     _focus_dir = 0 # l-r: 0, u:1, d:2, comeback from action: -1
@@ -124,30 +115,24 @@ class State():
 
     def _check_input(self):
         while True:
-            if State._l_key() <= State._l_val and self.left is not None:
-                ed.set_cond(State._l_key, State._l_val)
-                if ed.check_r() == 1:
+            if State.js.moved_left() and self.left is not None:
+                if State.js.check_r() == 1:
                     State._focus_dir = 0
                     return self.left
-            if State._r_key() >= State._r_val and self.right is not None:
-                ed.set_cond(State._r_key, State._r_val)
-                if ed.check_f() == 1:
+            if State.js.moved_right() and self.right is not None:
+                if State.js.check_f() == 1:
                     State._focus_dir = 0
                     return self.right
-            elif State._u_key() <= State._u_val and self.up is not None:
-                ed.set_cond(State._u_key, State._u_val)
-                ed.check_r()
-                if ed.check_r()== 1:
+            elif State.js.moved_up() and self.up is not None:
+                if State.js.check_r() == 1:
                     State._focus_dir = 1
                     return self.up
-            elif State._d_key() >= State._d_val and self.down is not None:
-                ed.set_cond(State._d_key, State._d_val)
-                if ed.check_f() == 1:
+            elif State.js.moved_down() and self.down is not None:
+                if State.js.check_f() == 1:
                     State._focus_dir = 2
                     return self.down
-            elif State._s_key() == State._s_val:
-                ed.set_cond(State._s_key, State._s_val)
-                if ed.check_sw_r() == 1:
+            elif State.js.pressed():
+                if State.js.check_sw_r() == 1:
                     State._focus_dir = -1
                     self._action()
                 
@@ -189,16 +174,7 @@ class uMenu():
     def set_controls(cls, r_key = None, r_val = None, l_key = None, l_val = None,
                      u_key = None, u_val = None, d_key = None, d_val = None,
                      s_key = None, s_val = None):
-        State._r_key = r_key
-        State._r_val = r_val
-        State._l_key = l_key
-        State._l_val = l_val
-        State._u_key = u_key
-        State._u_val = u_val
-        State._d_key = d_key
-        State._d_val = d_val
-        State._s_key = s_key
-        State._s_val = s_val
+        State.js = Joystick(r_key, r_val, l_key, l_val, u_key, u_val, d_key, d_val, s_key, s_val)
         
     @staticmethod
     def add_menu(menu: MenuElement):
@@ -222,6 +198,4 @@ class uMenu():
     def run_uMenu(self):
         uMenu.states[0]._state_transition()
 
-    
-ed = edgeDetector()
 
